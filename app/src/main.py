@@ -28,6 +28,10 @@ async def proxy(path: str, request: Request):
     return Response(
         content=resp.content,
         status_code=resp.status_code,
-        headers=resp.headers,
+        headers={
+            k: v
+            for k, v in resp.headers.items()
+            if k.lower() not in ("transfer-encoding", "connection")
+        },
         media_type=resp.headers.get("content-type"),
     )
