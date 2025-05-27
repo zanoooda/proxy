@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
-COPY ./app /app
-RUN pip install fastapi uvicorn httpx python-dotenv
-COPY .env /app/.env
+COPY ./app/src /app
+COPY ./app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
