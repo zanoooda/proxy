@@ -2,6 +2,17 @@ worker_processes 1;
 
 events { worker_connections 1024; }
 http {
+  map $uri $api_whitelist {
+    default 0;
+    /api/v1/models         1;
+    ~^/api/v1/models/      1;  
+    /api/v1/chat/completions 1;
+    /api/v1/completions    1;
+    /api/v1/embeddings     1;
+    /api/v1/generation     1;
+    /api/v1/moderations    1;
+  }
+
   server {
     listen 80;
     server_name _;
@@ -12,6 +23,9 @@ http {
     }
 
     location /api/ {
+        if ($api_whitelist = 0) {
+            return 403;
+        }
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host ${API_HOST};
