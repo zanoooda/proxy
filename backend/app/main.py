@@ -12,7 +12,8 @@ import httpx
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-API_KEY = os.getenv("OPENROUTER_API_KEY")
+API_KEY = os.getenv("API_KEY")
+API_HOST = os.getenv("API_HOST")
 
 # FastAPI application with lifespan for HTTP client reuse
 def get_lifespan():
@@ -39,12 +40,7 @@ class ChatRequest(BaseModel):
     response_class=StreamingResponse
 )
 async def proxy(full_path: str, request: Request):
-    """
-    Universal proxy: forwards any /api-v1/{full_path} request
-    to https://api.openrouter.ai/v1/{full_path},
-    preserving method, headers, query params and body.
-    """
-    target_url = f"https://openrouter.ai/api/v1/{full_path}"
+    target_url = f"https://{API_HOST}/api/v1/{full_path}"
 
     # Prepare headers with API key
     headers = {"Authorization": f"Bearer {API_KEY}"}

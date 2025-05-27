@@ -14,7 +14,7 @@ services:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
     command: >
       /bin/sh -c
-      "envsubst '$$OPENROUTER_API_KEY' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+      "envsubst '$$API_HOST $$API_KEY' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
       && exec nginx -g 'daemon off;'"
     env_file: ./.env
     ports:
