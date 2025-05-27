@@ -8,12 +8,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import httpx
 
-# Load environment variables from .env file
-env_path = Path(__file__).resolve().parent / ".env"
-load_dotenv(dotenv_path=env_path)
-
 API_KEY = os.getenv("API_KEY")
 API_HOST = os.getenv("API_HOST")
+
 
 # FastAPI application with lifespan for HTTP client reuse
 def get_lifespan():
@@ -22,9 +19,12 @@ def get_lifespan():
         async with httpx.AsyncClient(timeout=None) as client:
             app.state.http = client
             yield
+
     return lifespan
 
+
 app = FastAPI(lifespan=get_lifespan())
+
 
 # Pydantic model for chat requests
 class ChatRequest(BaseModel):
@@ -34,10 +34,11 @@ class ChatRequest(BaseModel):
     top_p: float = Field(None)
     stream: bool = Field(False)
 
+
 @app.api_route(
     "/api-v1/{full_path:path}",
     methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    response_class=StreamingResponse
+    response_class=StreamingResponse,
 )
 async def proxy(full_path: str, request: Request):
     target_url = f"https://{API_HOST}/api/v1/{full_path}"
@@ -62,7 +63,9 @@ async def proxy(full_path: str, request: Request):
         resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
         await resp.aclose()
-        raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+        raise HTTPException(
+            status_code=exc.response.status_code, detail=exc.response.text
+        )
 
     # Schedule context exit after streaming
     background = BackgroundTask(stream_ctx.__aexit__, None, None, None)
@@ -71,7 +74,10 @@ async def proxy(full_path: str, request: Request):
     return StreamingResponse(
         resp.aiter_raw(),
         status_code=resp.status_code,
-        headers={k: v for k, v in resp.headers.items()
-                 if k.lower() not in ("transfer-encoding", "connection")},
+        headers={
+            k: v
+            for k, v in resp.headers.items()
+            if k.lower() not in ("transfer-encoding", "connection")
+        },
         background=background,
     )
