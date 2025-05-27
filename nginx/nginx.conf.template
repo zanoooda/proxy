@@ -1,5 +1,3 @@
-# env API_KEY;
-
 worker_processes 1;
 
 events { worker_connections 1024; }
