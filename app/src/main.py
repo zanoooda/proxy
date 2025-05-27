@@ -72,6 +72,6 @@ async def proxy(full_path: str, request: Request):
         resp.aiter_raw(),
         status_code=resp.status_code,
         headers={k: v for k, v in resp.headers.items()
-                 if k.lower() not in ("content-encoding", "transfer-encoding", "connection")},
+                 if k.lower() not in ("transfer-encoding", "connection")},
         background=background,
     )
