@@ -66,5 +66,5 @@ async def proxy(full_path: str, request: Request):
             for k, v in resp.headers.items()
             if k.lower() not in ("transfer-encoding", "connection")
         },
-        background=background, #
+        background=background,
     )
