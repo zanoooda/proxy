@@ -1,6 +1,4 @@
 import os
-from pathlib import Path
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from starlette.background import BackgroundTask
@@ -12,7 +10,6 @@ API_KEY = os.getenv("API_KEY")
 API_HOST = os.getenv("API_HOST")
 
 
-# FastAPI application with lifespan for HTTP client reuse
 def get_lifespan():
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -26,7 +23,6 @@ def get_lifespan():
 app = FastAPI(lifespan=get_lifespan())
 
 
-# Pydantic model for chat requests
 class ChatRequest(BaseModel):
     model: str = Field(...)
     messages: list
@@ -42,13 +38,9 @@ class ChatRequest(BaseModel):
 )
 async def proxy(full_path: str, request: Request):
     target_url = f"https://{API_HOST}/api/v1/{full_path}"
-
-    # Prepare headers with API key
     headers = {"Authorization": f"Bearer {API_KEY}"}
     if request.headers.get("content-type"):
         headers["Content-Type"] = request.headers.get("content-type")
-
-    # Initiate streaming request to external API
     stream_ctx = app.state.http.stream(
         method=request.method,
         url=target_url,
@@ -58,7 +50,6 @@ async def proxy(full_path: str, request: Request):
         timeout=None,
     )
     resp = await stream_ctx.__aenter__()
-
     try:
         resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
@@ -66,11 +57,7 @@ async def proxy(full_path: str, request: Request):
         raise HTTPException(
             status_code=exc.response.status_code, detail=exc.response.text
         )
-
-    # Schedule context exit after streaming
     background = BackgroundTask(stream_ctx.__aexit__, None, None, None)
-
-    # Stream raw bytes back to client
     return StreamingResponse(
         resp.aiter_raw(),
         status_code=resp.status_code,
