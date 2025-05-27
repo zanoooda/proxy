@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from starlette.background import BackgroundTask
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 import httpx
 
 API_KEY = os.getenv("API_KEY")
@@ -21,14 +20,6 @@ def get_lifespan():
 
 
 app = FastAPI(lifespan=get_lifespan())
-
-
-class ChatRequest(BaseModel):
-    model: str = Field(...)
-    messages: list
-    temperature: float = Field(None)
-    top_p: float = Field(None)
-    stream: bool = Field(False)
 
 
 @app.api_route(
