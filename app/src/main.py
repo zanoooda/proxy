@@ -1,7 +1,6 @@
 import os
-from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from starlette.background import BackgroundTask
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -69,3 +68,8 @@ async def proxy(full_path: str, request: Request):
         },
         background=background,
     )
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
