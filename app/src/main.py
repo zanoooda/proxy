@@ -44,9 +44,10 @@ async def proxy(full_path: str, request: Request):
     try:
         resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
+        error_body = await exc.response.aread()
         await resp.aclose()
         raise HTTPException(
-            status_code=exc.response.status_code, detail=exc.response.text
+            status_code=exc.response.status_code, detail=error_body.decode(errors="replace")
         )
     background = BackgroundTask(stream_ctx.__aexit__, None, None, None)
     return StreamingResponse(
