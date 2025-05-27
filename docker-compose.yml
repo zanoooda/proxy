@@ -10,11 +10,11 @@ services:
   nginx:
     image: nginx:stable-alpine
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - "${STATIC_CONTENT_PATH}:/usr/share/nginx/html:ro"
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
     command: >
       /bin/sh -c
-      "envsubst '$$OPENROUTER_API_KEY' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+      "envsubst '$$API_HOST $$API_KEY' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
       && exec nginx -g 'daemon off;'"
     env_file: ./.env
     ports:
