@@ -1721,7 +1721,7 @@
         };
         
         // Make request
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api-v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,

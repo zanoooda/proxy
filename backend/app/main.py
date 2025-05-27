@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from starlette.background import BackgroundTask
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -12,57 +12,70 @@ import httpx
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 API_KEY = os.getenv("OPENROUTER_API_KEY")
-if not API_KEY:
-    raise RuntimeError("Environment variable OPENROUTER_API_KEY is missing")
 
+# FastAPI application with lifespan for HTTP client reuse
+def get_lifespan():
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        async with httpx.AsyncClient(timeout=None) as client:
+            app.state.http = client
+            yield
+    return lifespan
+
+app = FastAPI(lifespan=get_lifespan())
+
+# Pydantic model for chat requests
 class ChatRequest(BaseModel):
-    """Schema of the request body expected by OpenRouter."""
+    model: str = Field(...)
     messages: list
-    model: str = Field(default="openai/gpt-4o")
-    temperature: float = 0.7
-    max_tokens: int = 1200
-    stream: bool = True  # enable streaming responses
+    temperature: float = Field(None)
+    top_p: float = Field(None)
+    stream: bool = Field(False)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Create a single shared HTTP client for the app."""
-    async with httpx.AsyncClient(timeout=None) as client:
-        app.state.http = client
-        yield
+@app.api_route(
+    "/api-v1/{full_path:path}",
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    response_class=StreamingResponse
+)
+async def proxy(full_path: str, request: Request):
+    """
+    Universal proxy: forwards any /api-v1/{full_path} request
+    to https://api.openrouter.ai/v1/{full_path},
+    preserving method, headers, query params and body.
+    """
+    target_url = f"https://openrouter.ai/api/v1/{full_path}"
 
-app = FastAPI(lifespan=lifespan)
+    # Prepare headers with API key
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+    if request.headers.get("content-type"):
+        headers["Content-Type"] = request.headers.get("content-type")
 
-@app.post("/api/chat", response_class=StreamingResponse)
-async def proxy(chat: ChatRequest):
-    """Proxy request to OpenRouter and stream the SSE response back."""
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    # open stream but do not await context-manager directly
+    # Initiate streaming request to external API
     stream_ctx = app.state.http.stream(
-        "POST",
-        OPENROUTER_API_URL,
-        json=chat.dict(exclude_none=True),
+        method=request.method,
+        url=target_url,
         headers=headers,
+        params=request.query_params,
+        content=await request.body(),
+        timeout=None,
     )
     resp = await stream_ctx.__aenter__()
+
     try:
         resp.raise_for_status()
     except httpx.HTTPStatusError as exc:
         await resp.aclose()
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
 
-    # schedule context exit after streaming
+    # Schedule context exit after streaming
     background = BackgroundTask(stream_ctx.__aexit__, None, None, None)
 
-    # use text iterator for SSE events
+    # Stream raw bytes back to client
     return StreamingResponse(
-        resp.aiter_text(),
+        resp.aiter_raw(),
         status_code=resp.status_code,
-        media_type="text/event-stream",
+        headers={k: v for k, v in resp.headers.items()
+                 if k.lower() not in ("content-encoding", "transfer-encoding", "connection")},
         background=background,
     )

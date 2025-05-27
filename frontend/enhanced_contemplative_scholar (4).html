@@ -2622,7 +2622,7 @@ Model contemplative consciousness using quantum information theory, geometric ph
         this.state.api.controller = controller;
 
         try {
-          const response = await fetch('/api/chat', {
+          const response = await fetch('/api/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${this.state.api.key}`,
