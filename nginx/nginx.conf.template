@@ -5,6 +5,9 @@ events {
 }
 
 http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
     map $uri $api_whitelist {
         default                         0;
         /api/v1/models                  1;
