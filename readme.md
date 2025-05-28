@@ -1,31 +1,27 @@
 # V1 API Proxy
 
-A minimalist Docker-based proxy for services that expose an API at a `/api/v1/...` path. This setup uses Nginx as a reverse proxy.
+A tiny Docker stack that transparently forwards requests to your upstream REST service while adding an `Authorization: Bearer` token.
 
-## Prerequisites
+## Two ways to proxy
 
-*   Docker
-*   Docker Compose
+| Path          | Container            | Use‑case                         |
+| ------------- | -------------------- | -------------------------------- |
+| `/api-v1/...` | **FastAPI** (Python) | streams, SSE, custom logic       |
+| `/api/v1/...` | **Nginx**            | plain JSON/files, lowest latency |
 
-## Setup & Configuration
+## Requirements
 
-1.  **Clone the repository (or download the files).**
+* Docker **20.10+**
+* Docker Compose **v2** (bundled with Docker Desktop)
 
-2.  **Configure API Key:**
-    Create a `.env` file in the project root with your API key for the target service:
-    ```env
-    API_KEY=your_actual_api_key_here
-    ```
+## Quick start
 
-3.  **Start the services:**
-    ```bash
-    docker-compose up -d
-    ```
+```bash
+# 1. configure
+cp .env.example .env  # set API_KEY and API_HOST
 
-## Usage
+# 2. run
+docker compose up -d
+```
 
-Once running, the proxy makes the target API available at:
-
-`http://localhost/api/v1/...`
-
-Replace `...` with the specific endpoint of the target API you wish to access (e.g., `chat/completions`). All requests to this path will be forwarded, with the `API_KEY` from your `.env` file automatically included as a bearer token.
+Ready! Both endpoints are now available on `http://localhost`.
